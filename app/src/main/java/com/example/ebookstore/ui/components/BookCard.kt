@@ -28,6 +28,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
 import com.example.ebookstore.data.mock.MockData
 import com.example.ebookstore.domain.model.Book
 import com.example.ebookstore.ui.theme.EBookStoreSpacing
@@ -96,8 +98,12 @@ private fun VerticalCardContent(
     Column {
         // Cover image with sale badge overlay
         Box {
+            val context = LocalContext.current
             AsyncImage(
-                model             = book.coverUrl,
+                model             = ImageRequest.Builder(context)
+                    .data(book.coverUrl)
+                    .crossfade(300)
+                    .build(),
                 contentDescription = book.title,
                 contentScale      = ContentScale.Crop,
                 modifier          = Modifier
@@ -158,8 +164,12 @@ private fun HorizontalCardContent(
     ) {
         // Cover image
         Box {
+            val context = LocalContext.current
             AsyncImage(
-                model              = book.coverUrl,
+                model              = ImageRequest.Builder(context)
+                    .data(book.coverUrl)
+                    .crossfade(300)
+                    .build(),
                 contentDescription = book.title,
                 contentScale       = ContentScale.Crop,
                 modifier           = Modifier

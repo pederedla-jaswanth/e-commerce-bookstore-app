@@ -34,7 +34,10 @@ class MainActivity : ComponentActivity() {
             val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
 
             EBookStoreTheme(themeMode = themeMode) {
-                EBookStoreNavGraph()
+                EBookStoreNavGraph(
+                    themeMode         = themeMode,
+                    onThemeModeChange = themeViewModel::setThemeMode,
+                )
             }
         }
     }

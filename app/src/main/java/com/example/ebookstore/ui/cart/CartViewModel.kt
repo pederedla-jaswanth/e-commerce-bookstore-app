@@ -1,33 +1,38 @@
 package com.example.ebookstore.ui.cart
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.ebookstore.domain.model.Book
+import com.example.ebookstore.domain.repository.CartItemData
+import com.example.ebookstore.domain.repository.CartRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Data model
+// UI model (kept as-is so all existing screens compile without changes)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** One line-item in the cart. */
+/** One line-item in the cart (UI model). */
 data class CartItem(
     val book: Book,
     val quantity: Int = 1,
-)
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UI State
-// ─────────────────────────────────────────────────────────────────────────────
+) {
+    val lineTotal: Double get() = book.price * quantity
+}
 
 data class CartUiState(
     val items: List<CartItem> = emptyList(),
 ) {
-    /** Total number of individual books in the cart (sum of quantities). */
-    val itemCount: Int get() = items.sumOf { it.quantity }
+    val itemCount: Int  get() = items.sumOf { it.quantity }
+    val subtotal: Double get() = items.sumOf { it.lineTotal }
+    val shipping: Double get() = if (subtotal >= 500.0) 0.0 else 49.0
+    val grandTotal: Double get() = subtotal + shipping
+    val isEmpty: Boolean get() = items.isEmpty()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,47 +42,72 @@ data class CartUiState(
 /**
  * Shared ViewModel for cart state.
  *
- * Scoped to the NavGraph (created in [EBookStoreNavGraph]) so every screen
- * reads the same cart — the bottom-bar badge and CartScreen both observe this.
- *
- * Phase 9 will replace in-memory storage with a Room-backed repository.
+ * Now backed by [CartRepository] (Room/SQLite) — cart contents survive app
+ * restarts. The [uiState] Flow is derived directly from the Room Flow so the
+ * UI reacts to any database change automatically.
  */
 @HiltViewModel
-class CartViewModel @Inject constructor() : ViewModel() {
+class CartViewModel @Inject constructor(
+    private val cartRepository: CartRepository,
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CartUiState())
-    val uiState: StateFlow<CartUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<CartUiState> = cartRepository.observeItems()
+        .map { items -> CartUiState(items = items.map { it.toCartItem() }) }
+        .stateIn(
+            scope         = viewModelScope,
+            started       = SharingStarted.WhileSubscribed(5_000),
+            initialValue  = CartUiState(),
+        )
 
-    /** Adds one copy of [book] to the cart (increments quantity if already present). */
+    // ── Write operations ──────────────────────────────────────────────────────
+
     fun addToCart(book: Book) {
-        _uiState.update { state ->
-            val existing = state.items.indexOfFirst { it.book.id == book.id }
-            if (existing >= 0) {
-                val updated = state.items.toMutableList().also {
-                    it[existing] = it[existing].copy(quantity = it[existing].quantity + 1)
-                }
-                state.copy(items = updated)
-            } else {
-                state.copy(items = state.items + CartItem(book))
-            }
+        viewModelScope.launch { cartRepository.addToCart(book) }
+    }
+
+    fun increaseQuantity(bookId: String) {
+        viewModelScope.launch {
+            val current = uiState.value.items.find { it.book.id == bookId }?.quantity ?: return@launch
+            cartRepository.setQuantity(bookId, current + 1)
         }
     }
 
-    /** Removes a single copy of [bookId]; removes the line entirely if quantity reaches 0. */
-    fun removeFromCart(bookId: String) {
-        _uiState.update { state ->
-            val updated = state.items.mapNotNull { item ->
-                if (item.book.id == bookId) {
-                    if (item.quantity > 1) item.copy(quantity = item.quantity - 1) else null
-                } else {
-                    item
-                }
-            }
-            state.copy(items = updated)
+    fun decreaseQuantity(bookId: String) {
+        viewModelScope.launch {
+            val current = uiState.value.items.find { it.book.id == bookId }?.quantity ?: return@launch
+            cartRepository.setQuantity(bookId, current - 1)
         }
     }
 
-    /** Returns true if [bookId] is already in the cart. */
+    fun removeItem(bookId: String) {
+        viewModelScope.launch { cartRepository.removeItem(bookId) }
+    }
+
+    fun clearCart() {
+        viewModelScope.launch { cartRepository.clearCart() }
+    }
+
+    // ── Read helpers ──────────────────────────────────────────────────────────
+
     fun isInCart(bookId: String): Boolean =
-        _uiState.value.items.any { it.book.id == bookId }
+        uiState.value.items.any { it.book.id == bookId }
+
+    // ── Mapper ────────────────────────────────────────────────────────────────
+
+    private fun CartItemData.toCartItem() = CartItem(
+        book = Book(
+            id            = bookId,
+            title         = title,
+            author        = author,
+            coverUrl      = coverUrl,
+            price         = price,
+            originalPrice = originalPrice,
+            rating        = 0f,
+            ratingCount   = 0,
+            format        = format,
+            categories    = emptyList(),
+            deliveryDate  = "",
+        ),
+        quantity = quantity,
+    )
 }

@@ -15,8 +15,10 @@ This file provides documentation and orientation context for agents in Ask mode.
 
 - `LocalRatingStarColor` is a custom `CompositionLocal` for amber star color — it's NOT in the M3 color scheme. It throws if accessed outside `EBookStoreTheme`.
 - `EBookStoreTheme` wraps both `MaterialTheme` and `CompositionLocalProvider` — it is the single entry point for all theming.
-- `ThemeMode` enum (SYSTEM/LIGHT/DARK) is persisted via DataStore through `ThemePreferenceRepository`; the `ThemeViewModel` reads it and passes it to `EBookStoreTheme` in `MainActivity`.
-- `CartItemCount` is tracked inside `HomeUiState` today but will need a shared `CartViewModel` when `EBookStoreNavGraph` needs to show the badge count.
+- `ThemeMode` enum (SYSTEM/LIGHT/DARK) is persisted via DataStore through `ThemePreferenceRepository`; `ThemeViewModel` (Activity-scoped, in `MainActivity`) reads it and passes it into `EBookStoreTheme`.
+- `CartViewModel` and `WishlistViewModel` are NavGraph-scoped — they live in `EBookStoreNavGraph` and are passed as parameters into screens, not re-created per screen.
+- `EBookStoreNavGraph` owns the `Scaffold` + `BottomBar` — no screen has its own Scaffold.
+- `hilt-navigation-compose 1.4.0` emits deprecation warnings for `hiltViewModel` — cosmetic only, works correctly.
 
 ## Phase Completion Status
 
@@ -24,6 +26,11 @@ This file provides documentation and orientation context for agents in Ask mode.
 |-------|--------|-----------|
 | 3 — Architecture | ✅ Done | `EBookStoreApplication`, `di/AppModule` |
 | 4 — Theme | ✅ Done | `ui/theme/*` |
-| 5 — Navigation | ✅ Done | `ui/navigation/*`, screen stubs |
-| 6 — Home Screen | 🔄 Partial | Components built; `HomeScreen.kt` is placeholder |
-| 7–13 | ⬜ Not started | — |
+| 5 — Navigation | ✅ Done | `ui/navigation/*` |
+| 6 — Home Screen | ✅ Done | `ui/screens/home/*`, all components |
+| 7 — Catalogue | ✅ Done | `ui/screens/catalogue/*` |
+| 8 — Book Detail | ✅ Done | `ui/screens/bookdetail/*` |
+| 9 — Cart + Wishlist | ✅ Done | `ui/screens/cart/*`, `ui/screens/wishlist/*` |
+| 10 — Auth + Profile | 🔄 Next | `ui/screens/auth/` is empty |
+| 11 — Checkout + Payment | ⬜ Not started | — |
+| 13 — Order History | ⬜ Not started | — |

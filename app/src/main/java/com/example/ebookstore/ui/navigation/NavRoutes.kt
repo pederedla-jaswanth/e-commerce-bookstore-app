@@ -31,12 +31,18 @@ sealed class NavRoutes {
         object BookDetail : Detail("book_detail/{bookId}") {
             fun createRoute(bookId: String) = "book_detail/$bookId"
         }
-        object Login       : Detail("login")
-        object Register    : Detail("register")
+        object Wishlist           : Detail("wishlist")
+        object Login              : Detail("login")
+        /** Login entry point when coming from the Cart checkout button — returns to Cart on success. */
+        object LoginForCheckout   : Detail("login_for_checkout")
+        object Register           : Detail("register")
         object Checkout    : Detail("checkout")
         object Payment     : Detail("payment")
         object OrderConfirmation : Detail("order_confirmation/{orderId}") {
             fun createRoute(orderId: String) = "order_confirmation/$orderId"
+        }
+        object OrderDetail : Detail("order_detail/{orderId}") {
+            fun createRoute(orderId: String) = "order_detail/$orderId"
         }
     }
 }

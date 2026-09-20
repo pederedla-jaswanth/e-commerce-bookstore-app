@@ -24,10 +24,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ebookstore.domain.model.Book
 import com.example.ebookstore.ui.cart.CartViewModel
@@ -36,7 +37,9 @@ import com.example.ebookstore.ui.components.CardLayoutMode
 import com.example.ebookstore.ui.components.CategoryChipRow
 import com.example.ebookstore.ui.components.EBookStoreTopAppBar
 import com.example.ebookstore.ui.components.HeroBanner
+import com.example.ebookstore.ui.components.RecommendationRow
 import com.example.ebookstore.ui.components.SectionHeader
+import com.example.ebookstore.ui.screens.recommendations.RecommendationsViewModel
 import com.example.ebookstore.ui.theme.EBookStoreSpacing
 import com.example.ebookstore.ui.theme.EBookStoreTheme
 import com.example.ebookstore.ui.theme.ThemeMode
@@ -57,30 +60,40 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun HomeScreen(
+    cartViewModel: CartViewModel,
+    recommendationsViewModel: RecommendationsViewModel,
     modifier: Modifier = Modifier,
     onNavigateToCart: () -> Unit = {},
     onNavigateToBook: (String) -> Unit = {},
     onNavigateToCatalogue: () -> Unit = {},
+    onNavigateToProfile: () -> Unit = {},
     homeViewModel: HomeViewModel = hiltViewModel(),
-    cartViewModel: CartViewModel = hiltViewModel(),
 ) {
-    val uiState   by homeViewModel.uiState.collectAsStateWithLifecycle()
-    val cartState by cartViewModel.uiState.collectAsStateWithLifecycle()
+    val uiState          by homeViewModel.uiState.collectAsStateWithLifecycle()
+    val cartState        by cartViewModel.uiState.collectAsStateWithLifecycle()
+    val recommendState   by recommendationsViewModel.uiState.collectAsStateWithLifecycle()
+
+    // Refresh global recommendations when the home screen is entered
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        recommendationsViewModel.refreshGlobal()
+    }
 
     HomeScreenContent(
-        uiState             = uiState,
-        cartItemCount       = cartState.itemCount,
-        onSearchQueryChange = homeViewModel::onSearchQueryChange,
-        onSearchSubmit      = {
+        uiState               = uiState,
+        cartItemCount         = cartState.itemCount,
+        trendingBooks         = recommendState.trending,
+        onSearchQueryChange   = homeViewModel::onSearchQueryChange,
+        onSearchSubmit        = {
             homeViewModel.onSearchSubmit()
             onNavigateToCatalogue()
         },
-        onCategorySelect    = homeViewModel::onCategorySelected,
-        onNavigateToCart    = onNavigateToCart,
-        onNavigateToBook    = onNavigateToBook,
+        onCategorySelect      = homeViewModel::onCategorySelected,
+        onNavigateToCart      = onNavigateToCart,
+        onNavigateToBook      = onNavigateToBook,
         onNavigateToCatalogue = onNavigateToCatalogue,
-        onAddToCart         = cartViewModel::addToCart,
-        modifier            = modifier,
+        onNavigateToProfile   = onNavigateToProfile,
+        onAddToCart           = cartViewModel::addToCart,
+        modifier              = modifier,
     )
 }
 
@@ -101,6 +114,8 @@ fun HomeScreenContent(
     onNavigateToCatalogue: () -> Unit,
     onAddToCart: (Book) -> Unit,
     modifier: Modifier = Modifier,
+    trendingBooks: List<Book> = emptyList(),
+    onNavigateToProfile: () -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope    = rememberCoroutineScope()
@@ -140,7 +155,7 @@ fun HomeScreenContent(
                         onSearchSubmit      = onSearchSubmit,
                         cartItemCount       = cartItemCount,
                         onCartClick         = onNavigateToCart,
-                        onAccountClick      = {},
+                        onAccountClick      = onNavigateToProfile,
                     )
                 }
 
@@ -214,6 +229,19 @@ fun HomeScreenContent(
                     )
                 }
 
+                // ── 7. Trending Now ───────────────────────────────────────────
+                if (trendingBooks.isNotEmpty()) {
+                    item(key = "trending_row") {
+                        Spacer(Modifier.height(EBookStoreSpacing.Small))
+                        RecommendationRow(
+                            title         = "Trending Now",
+                            books         = trendingBooks,
+                            onBookClick   = onNavigateToBook,
+                            onSeeAllClick = onNavigateToCatalogue,
+                        )
+                    }
+                }
+
                 // ── Loading / error states ────────────────────────────────────
                 if (uiState.isLoading) {
                     item(key = "loading") {
@@ -274,8 +302,8 @@ fun HomeScreenContent(
 /**
  * Horizontal lazy row of [BookCard] items in [CardLayoutMode.VERTICAL] mode.
  *
- * Each card is 160 dp wide. Long-pressing (future) or tapping the card body
- * triggers [onCardClick]; the wishlist icon triggers [onAddToCart].
+ * Card width is responsive: ~40% of screen width, clamped to 140–200 dp,
+ * so cards look good on phones AND tablets without hardcoded sizes.
  */
 @Composable
 private fun BookCardRow(
@@ -284,6 +312,9 @@ private fun BookCardRow(
     onAddToCart: (Book) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    val cardWidthDp   = (screenWidthDp * 0.38f).coerceIn(140f, 200f)
+
     LazyRow(
         modifier            = modifier.fillMaxWidth(),
         contentPadding      = PaddingValues(horizontal = EBookStoreSpacing.Medium),
@@ -295,7 +326,7 @@ private fun BookCardRow(
                 onCardClick     = onCardClick,
                 onWishlistClick = { onAddToCart(book) },
                 layoutMode      = CardLayoutMode.VERTICAL,
-                modifier        = Modifier.width(160.dp),
+                modifier        = Modifier.width(cardWidthDp.dp),
             )
         }
     }

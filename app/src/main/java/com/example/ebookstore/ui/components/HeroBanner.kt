@@ -30,6 +30,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
 import com.example.ebookstore.data.mock.MockData
 import com.example.ebookstore.domain.model.Banner
 import com.example.ebookstore.ui.theme.EBookStoreSpacing
@@ -79,8 +81,12 @@ fun HeroBanner(
             .clickable { onBannerClick(banner.actionRoute) },
     ) {
         // Background image
+        val context = LocalContext.current
         AsyncImage(
-            model              = banner.imageUrl,
+            model              = ImageRequest.Builder(context)
+                .data(banner.imageUrl)
+                .crossfade(300)
+                .build(),
             contentDescription = banner.title,
             contentScale       = ContentScale.Crop,
             modifier           = Modifier.fillMaxSize(),

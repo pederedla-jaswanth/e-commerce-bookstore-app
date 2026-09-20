@@ -3,8 +3,8 @@ package com.example.ebookstore.ui.components
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.StarHalf
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarHalf
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -49,7 +49,7 @@ fun StarRating(
         repeat(totalStars) { index ->
             val icon = when {
                 index < fullStars              -> Icons.Filled.Star
-                index == fullStars && hasHalf  -> Icons.Filled.StarHalf
+                index == fullStars && hasHalf  -> Icons.AutoMirrored.Filled.StarHalf
                 else                           -> Icons.Outlined.StarOutline
             }
             Icon(

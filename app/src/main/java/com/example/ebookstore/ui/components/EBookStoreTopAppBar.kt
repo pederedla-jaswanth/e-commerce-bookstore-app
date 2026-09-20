@@ -68,7 +68,7 @@ fun EBookStoreTopAppBar(
             title = {
                 Text(
                     text  = "EBookStore",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
                 )
             },

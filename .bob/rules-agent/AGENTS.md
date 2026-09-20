@@ -16,8 +16,15 @@ This file provides coding-specific guidance for agents working in this repositor
 1. Create `ui/screens/<name>/<Name>Screen.kt` + `<Name>ViewModel.kt` in the same package.
 2. UiState = single `data class <Name>UiState(...)` in the same file as the ViewModel.
 3. Expose state as `val uiState: StateFlow<…> = _uiState.asStateFlow()`.
-4. Add both light + dark `@Preview` annotations — dark preview must pass `themeMode = ThemeMode.DARK`.
-5. Add route object to `NavRoutes` sealed class, then `composable()` entry in `EBookStoreNavGraph`.
+4. Split into stateful entry-point (`<Name>Screen`) + stateless `<Name>ScreenContent` — previews must use the stateless overload (calling `hiltViewModel()` in a preview crashes).
+5. Add both light + dark `@Preview` annotations — dark preview must pass `themeMode = ThemeMode.DARK`.
+6. Add route object to `NavRoutes` sealed class, then `composable()` entry in `EBookStoreNavGraph`.
+
+## ViewModel Scoping (Non-Obvious)
+
+- **Never call `hiltViewModel<CartViewModel>()`** inside `HomeScreen`, `CatalogueScreen`, `BookDetailScreen`, or `CartScreen`. Those screens receive `cartViewModel` as a **parameter** because the instance is created at NavGraph level.
+- Same rule for `WishlistViewModel` — it is NavGraph-scoped and passed as a parameter to `WishlistScreen` and `BookDetailScreen`.
+- **`ThemeViewModel` is Activity-scoped** (`by viewModels()` in `MainActivity`) — pass `themeMode: ThemeMode` and `onThemeModeChange: (ThemeMode) -> Unit` down as parameters to `ProfileScreen` via `EBookStoreNavGraph`.
 
 ## Color / Theme Non-Negotiables
 
@@ -32,7 +39,7 @@ This file provides coding-specific guidance for agents working in this repositor
 ```kotlin
 @HiltViewModel
 class FooViewModel @Inject constructor(
-    private val someRepo: SomeRepository,   // injected by Hilt
+    private val someRepo: SomeRepository,
 ) : ViewModel()
 ```
 
@@ -42,6 +49,14 @@ New repository bindings go in [`di/AppModule.kt`](../../app/src/main/java/com/ex
 
 Currently no real API. All data comes from [`data/mock/MockData.kt`](../../app/src/main/java/com/example/ebookstore/data/mock/MockData.kt).
 Do not add Retrofit calls until the API phase is explicitly started.
+
+## Phase 10 Coding Checklist
+
+- `AuthViewModel` in `ui/screens/auth/` — mock login/register/logout, exposes `AuthUiState` with `isLoggedIn`, `currentUser`, `isLoading`, `error`.
+- `LoginScreen` + `RegisterScreen` in `ui/screens/auth/` — form validation, password visibility toggle, `*Content` stateless overload, light+dark previews.
+- Uncomment Login/Register `composable()` entries in `EBookStoreNavGraph`.
+- `ProfileScreen` full replacement: add `themeMode: ThemeMode` + `onThemeModeChange: (ThemeMode) -> Unit` + `onLogout: () -> Unit` params; implement `SingleChoiceSegmentedButtonRow` for theme toggle.
+- Wire `themeMode`/`onThemeModeChange` through `EBookStoreNavGraph` (which receives them as params from `MainActivity`).
 
 ## Validation
 

@@ -56,14 +56,21 @@ Package: `com.example.ebookstore` — **never change this**.
 
 - Route strings are in [`NavRoutes.kt`](app/src/main/java/com/example/ebookstore/ui/navigation/NavRoutes.kt) sealed class — never write raw route strings inline.
 - New screen checklist: add object to `NavRoutes` → add `composable()` in `EBookStoreNavGraph` → add `BottomNavItem` if bottom-nav tab.
-- Bottom-bar visibility is controlled inside `EBookStoreNavGraph` — detail routes (BookDetail, Checkout, etc.) must NOT be in `bottomNavItems`.
+- Bottom-bar visibility is controlled inside `EBookStoreNavGraph` — detail routes must NOT be in `bottomNavItems`.
+- **`EBookStoreNavGraph` owns the `Scaffold`** — screens must NOT contain their own Scaffold.
+
+## ViewModel Scoping
+
+- `CartViewModel` and `WishlistViewModel` are **NavGraph-scoped** (created via `hiltViewModel()` inside `EBookStoreNavGraph`). Pass them as parameters to screens — do not call `hiltViewModel()` again inside child screens.
+- `ThemeViewModel` is **Activity-scoped** (created in `MainActivity` via `by viewModels()`). Profile screen receives `themeMode` and `onThemeModeChange` as parameters — it does NOT call `hiltViewModel<ThemeViewModel>()` itself.
 
 ## Code Conventions
 
 - All `@HiltViewModel` classes use `@Inject constructor()`.
 - UI state is a single immutable `data class *UiState` exposed as `StateFlow<*UiState>` — update via `_uiState.update { it.copy(...) }`.
-- Every screen composable must have `@Preview` for both light and dark themes (see [`HomeScreen.kt`](app/src/main/java/com/example/ebookstore/ui/screens/home/HomeScreen.kt) for pattern).
-- Preview dark theme: `EBookStoreTheme(themeMode = ThemeMode.DARK)`.
+- Every screen composable must have `@Preview` for both light and dark themes.
+  - Dark preview: `EBookStoreTheme(themeMode = ThemeMode.DARK)`.
+  - Previews use a stateless `*Content()` overload — `hiltViewModel()` crashes in preview context.
 - `BookCard` has `VERTICAL` (grid/row) and `HORIZONTAL` (list) modes via `CardLayoutMode` enum.
 
 ## Design Authority
@@ -75,7 +82,15 @@ Package: `com.example.ebookstore` — **never change this**.
 
 ## Current Phase Status
 
-- Phases 3–5 complete (Architecture, Theme, Navigation + bottom bar).
-- Phase 6 (Home Screen) partially done — all components built, `HomeScreen.kt` is still a placeholder needing full assembly.
-- `EBookStoreNavGraph.kt` needs `cartItemCount` wired from a shared `CartViewModel`.
-- Phases 7–13 (Catalogue, Book Detail, Cart, Auth, Checkout/Payment, Profile, Order History) not started.
+| Phase | Status | Notes |
+|-------|--------|-------|
+| 3–5 | ✅ Done | Architecture, Theme, Navigation + bottom bar |
+| 6 | ✅ Done | Home Screen fully assembled |
+| 7 | ✅ Done | Catalogue Screen with filter/sort |
+| 8 | ✅ Done | Book Detail Screen |
+| 9 | ✅ Done | Cart + Wishlist screens |
+| 10 | 🔄 Next | Auth (Login/Register) + full Profile Screen |
+| 11 | ⬜ | Checkout + Payment |
+| 13 | ⬜ | Order History |
+
+**Phase 10 specifics**: `AuthViewModel` + `LoginScreen` + `RegisterScreen` go in `ui/screens/auth/`. `ProfileScreen` needs replacing — it currently receives `onNavigateToWishlist: () -> Unit` and needs `themeMode: ThemeMode` + `onThemeModeChange: (ThemeMode) -> Unit` added (passed from `MainActivity` → `EBookStoreNavGraph` → `ProfileScreen`). Login/Register composable entries in NavGraph are currently commented out.
