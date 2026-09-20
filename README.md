@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="app/src/main/res/drawable/ic_launcher_foreground.xml" width="80" height="80" alt="EBookStore Icon" />
-
 # 📚 EBookStore
 
 ### A modern e-book shopping app built with Jetpack Compose & Material Design 3
