@@ -2,7 +2,7 @@
 
 # 📚 EBookStore
 
-### A modern e-book shopping app built with Jetpack Compose & Material Design 3
+### A modern e-book shopping app built with Kotlin, Jetpack Compose & Material Design 3
 
 [![Android](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
